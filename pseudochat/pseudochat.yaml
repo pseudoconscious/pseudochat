@@ -1,0 +1,89 @@
+# PseudoChat configuration.
+
+llm:
+  generate:
+    provider: openrouter
+    env_path: 'd:\___env_var\openrouter-gpt-6.1-sol.env'
+  choose:
+    provider: openrouter
+    env_path: 'd:\___env_var\openrouter-jev1.13.env'
+
+# Agent state:
+#   persona     - who the assistant is; feeds the respond prompt
+#   user_input  - latest user message; set by get_user_input,
+#                 cleared by digest
+#   ai_response - latest reply; set by respond, cleared by digest
+#   profile     - timeless: the current understanding of the
+#                 user (sentiment, feelings, preferences, goals,
+#                 facts, relationship), rewritten by digest
+#                 after every exchange
+
+data:
+  persona: >-
+    You are PseudoChat, a concise and friendly assistant.
+    Answer directly, without filler.
+  user_input: null
+  ai_response: null
+  profile:
+    user_sentiment: neutral
+    feelings: ""
+    preferences: []
+    open_goals: []
+    facts: []
+    relationship: first contact
+
+# AHP tools: choose_ahp picks one per iteration based on the
+# descriptions and criterias. handler is the dotted path to
+# the function in pseudochat_tools.py.
+
+tools:
+  get_user_input:
+    description: >-
+      Asks the user for their next message and stores it in
+      the state as user_input. Choose this whenever new
+      information from the user is needed to proceed; do not
+      choose it while a user message is already waiting or
+      when nothing depends on the user right now.
+    handler: pseudochat_tools.get_user_input
+  respond:
+    description: >-
+      Generates and prints a reply to the user's latest
+      message from the persona and the timeless profile.
+      Choose this only when a fresh user message
+      is waiting and a reply is due.
+    handler: pseudochat_tools.respond
+  digest:
+    description: >-
+      Mandatory digest tool.
+    handler: pseudochat_tools.digest
+
+
+criterias:
+  input_necessity: >-
+    How necessary is it right now to obtain new information
+    from the user? High when the conversation is blocked on
+    the user; low when a user message is already waiting or
+    nothing depends on the user.
+  response_readiness: >-
+    How able is the agent to produce a useful reply from the
+    current state, given the pending user input and the
+    timeless profile?
+  redundancy_avoidance: >-
+    How much does this action avoid repetition, such as
+    prompting the user twice for the same thing or responding
+    twice to the same message?
+  conversation_progress: >-
+    How directly does this action move the conversation
+    forward toward fulfilling the user's request?
+  emotional_appropriateness: >-
+    How well does this action respect the user's current
+    sentiment and feelings as captured in the profile? An
+    action that acknowledges a frustrated user, or shares a
+    happy moment, is more appropriate than one that ignores
+    the emotional state.
+
+# Engine settings; max_iterations bounds the loop.
+
+settings:
+  loop_delay_seconds: 1
+  max_iterations: 200
